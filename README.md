@@ -3,43 +3,48 @@
 > 以 GitHub Issues 为多 Agent 项目状态机，微信一句话管理项目进度。
 >
 > 📄 知识库: `/mnt/f/04_Obsidian/ai-agent/projects/hermes-project-control.md`
+> 📋 核心规范: [TASK_SPEC.md](./TASK_SPEC.md) (v1.1, 已通过审查)
 
 ## 架构
 
 ```
-用户微信 → 小艾（API层）→ GitHub Issues（状态机）← 子 Agent
-                ↓
-           Obsidian（知识库 + 项目文档）
+用户微信 → 小艾（PM/API层）
+              ├─ 读 .task 文件（状态机）
+              ├─ 读写 GitHub Issues（看板+日志）
+              ├─ tmux send-keys → wiki-agent
+              ├─ delegate_task → coco-agent
+              └─ Obsidian（项目设计文档）
 ```
 
-## 原始 Skill
+## 当前状态
 
-整合自三个自建 skill：
-- `github-issues-project-tracking`（80行）— GitHub Issues 状态机 + 微信指令
-- `project-management`（41行）— Phase 1-4 通用流程
-- `qmd`（116行）— FlowState-QMD 外部工具
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| Phase 1 | project-control skill v2.2（6 操作 + 验收标准 + 启动协议 + 信息架构） | ✅ |
+| Phase 2 | .task 规范 v1.1（状态机 + 并发安全 + 异常恢复） | ✅ 通过审查 |
+| Phase 3 | 首个实战项目（AUTOSAR 编译, Issue #1） | ⏳ |
+| Phase 4 | 长期运营（按月审查、agent 能力注册） | ⏳ |
 
-## 路线图
+## 核心文件
 
-### Phase 1: 整合设计
-- [ ] 提取三个 skill 的核心逻辑
-- [ ] 设计统一 project-control skill 结构
+| 文件 | 用途 |
+|------|------|
+| [TASK_SPEC.md](./TASK_SPEC.md) | .task 文件规范 v1.1 |
+| [docs/TASK_SPEC_REVIEW_v1.0.md](./docs/TASK_SPEC_REVIEW_v1.0.md) | v1.0 审查报告（25 issues） |
+| [docs/TASK_SPEC_REVIEW_v1.1.md](./docs/TASK_SPEC_REVIEW_v1.1.md) | v1.1 复审报告（通过） |
+| `~/.hermes/skills/project-control/SKILL.md` | 操作 skill（agent 加载） |
+| `~/.hermes/projects/` | .task 文件运行时目录 |
 
-### Phase 2: 实现
-- [ ] 重写为单一 skill（四层标准）
-- [ ] 完整指令映射表
-- [ ] 多 Agent 协调协议
+## Agent 角色
 
-### Phase 3: 基础设施
-- [ ] Obsidian 项目页面
-- [ ] 示例 Issue 测试
-
-### Phase 4: 长期运营
-- [ ] 新项目强制走 project-control
-- [ ] 按月审查活跃项目
+| Agent | 职责 | 触发方式 |
+|-------|------|---------|
+| 小艾 | PM：需求分析、任务分配、验收 | 微信/CLI |
+| wiki-agent | 知识库操作、文档处理 | tmux + 任务消息 |
+| coco-agent | 编码实现、代码审查 | delegate_task |
+| Hermes (审查) | 独立审查规范/方案 | delegate_task |
 
 ## 关联
 
 - 治理体系: [hermes-skill-governance](https://github.com/duanhaoyu88/hermes-skill-governance)
-- Agent 协作: wiki-agent, coco-agent
 - 知识库: `/mnt/f/04_Obsidian/`
