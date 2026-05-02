@@ -1,0 +1,52 @@
+name: Label Change Notify
+
+on:
+  issues:
+    types: [labeled, unlabeled]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine notification target based on label
+        id: target
+        env:
+          LABEL: ${{ github.event.label.name }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          case "$LABEL" in
+            needs-review)
+              echo "agent=qa-agent" >> $GITHUB_OUTPUT
+              echo "message=审查请求: Issue #${{ github.event.issue.number }} 标记为 needs-review" >> $GITHUB_OUTPUT
+              ;;
+            qa-passed)
+              echo "agent=pm-agent" >> $GITHUB_OUTPUT
+              echo "message=审查通过: Issue #${{ github.event.issue.number }} 已通过 QA" >> $GITHUB_OUTPUT
+              ;;
+            qa-failed|qa-conditional)
+              echo "agent=coco-agent" >> $GITHUB_OUTPUT
+              echo "message=审查结果: Issue #${{ github.event.issue.number }} 标记为 $LABEL" >> $GITHUB_OUTPUT
+              ;;
+            blocked)
+              echo "agent=pm-agent" >> $GITHUB_OUTPUT
+              echo "message=阻塞: Issue #${{ github.event.issue.number }} 标记为 blocked" >> $GITHUB_OUTPUT
+              ;;
+            done)
+              echo "agent=wiki-agent" >> $GITHUB_OUTPUT
+              echo "message=归档: Issue #${{ github.event.issue.number }} 已完成，检查知识库更新" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "agent=none" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Comment on issue with notification target
+        if: steps.target.outputs.agent != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AGENT: ${{ steps.target.outputs.agent }}
+          MESSAGE: ${{ steps.target.outputs.message }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --repo ${{ github.repository }} \
+            --body "🔔 **Agent 通知:** @$AGENT — $MESSAGE"

@@ -1,0 +1,73 @@
+name: Sync Labels
+
+on:
+  push:
+    paths:
+      - 'labels.md'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse and sync labels to hermes-governance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Parse labels.md section by section and create labels
+          # State labels (mutually exclusive)
+          LABELS=(
+            "backlog:#7057ff:待办池"
+            "ready:#0e8a16:已排期"
+            "design-review:#fef2c0:设计审查"
+            "in-progress:#fbca04:实施中"
+            "needs-review:#d93f0b:提交审查"
+            "qa-passed:#bfe5bf:审查通过"
+            "qa-failed:#b60205:审查打回"
+            "qa-conditional:#fbca04:条件通过"
+            "blocked:#000000:阻塞"
+            "done:#ffffff:完成"
+            # Type labels
+            "bug:#d73a4a:缺陷"
+            "feature:#a2eeef:功能"
+            "task:#006b75:任务"
+            "design:#fef2c0:设计"
+            "chore:#bfdadc:维护"
+            # Priority labels
+            "priority:critical:#b60205:阻塞/数据安全"
+            "priority:high:#d93f0b:核心功能"
+            "priority:medium:#fbca04:正常"
+            "priority:low:#0e8a16:可推迟"
+            # Layer labels
+            "layer:team:#c5def5:团队管理"
+            "layer:project:#d4c5f9:项目追踪"
+            "layer:protocol:#f9d4c5:通信协议"
+            "layer:skill:#c5f9d4:Skill治理"
+            "layer:knowledge:#f9f9c5:知识管理"
+            # Phase labels
+            "phase:1:#e4e669:讨论阶段"
+            "phase:2:#c5def5:落地阶段"
+            "phase:3:#d4c5f9:试运行"
+            # Special labels
+            "needs-triage:#e4e669:待分类"
+            "wontfix:#ffffff:不修复"
+            "good-first-issue:#7057ff:新手入门"
+          )
+
+          for label in "${LABELS[@]}"; do
+            IFS=':' read -r name color desc <<< "$label"
+            echo "Creating/updating label: $name ($color)"
+            gh label create "$name" \
+              --color "$color" \
+              --description "$desc" \
+              --repo "$REPO" \
+              2>/dev/null || \
+            gh label edit "$name" \
+              --color "$color" \
+              --description "$desc" \
+              --repo "$REPO" \
+              2>/dev/null || true
+          done
